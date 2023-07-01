@@ -6,7 +6,7 @@
       <button @click="editEvent(schedule.indexOf(x))">編輯</button>
       <button @click="schedule.splice(schedule.indexOf(x), 1)">刪除</button>
     </div>
-
+ 
     <div>
       <select v-model="selectedSubject">
         <option v-for="x in subjects" :value="x" :key="x">{{ x }}</option>
