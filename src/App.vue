@@ -4,7 +4,7 @@
       <span style="margin-right: 8px;">{{ x.name }}</span>
       <span>{{ x.start }} ~ {{ x.end }}</span>
       <button @click="editEvent(schedule.indexOf(x))">編輯</button>
-      <button @click="schedule.splice(schedule.indexOf(x), 1)">刪除</button>
+      <button @click="deleteEvent(schedule.indexOf(x))">刪除</button>
     </div>
  
     <div>
@@ -34,7 +34,7 @@
     
     <div class="current-event" v-if="currentEvent != null">
       <div class="countdown">
-        <span v-if="countdown">剩下 {{ countdown }}</span>
+        <span v-if="countdown">剩下 {{ countdown }} 分鐘</span>
       </div>
       <div class="event-details">
         <span style="margin-right: 20px;">{{ currentEvent.name }}</span>
@@ -70,7 +70,7 @@ export default {
       schedule: [
         {id: 1, name: "英文", start: "14:50", end: "15:00"},
         {id: 2, name: "數學", start: "16:50", end: "17:40"},
-        {id: 3, name: "國文", start: "17:50", end: "18:50"}
+        {id: 3, name: "國文", start: "17:50", end: "21:50"}
       ],
       activeSchedule: [],
       currentEvent: null,
@@ -111,12 +111,10 @@ export default {
         if (date > start && date < end) {
           let h2 = end.getHours() - h;
           let m2 = end.getMinutes() - m;
-          this.countdown = ((h2 < 10) ? "0" + h2 : h2) + ":" + ((m2 < 10) ? "0" + m2 : m2);
+          this.countdown = (h2 * 60) + m2 - 1;
         }
         else {
           this.refreshSchedule();
-          this.currentEvent = null;
-          this.countdown = null;
         }
       }
       else {
@@ -156,9 +154,12 @@ export default {
     refreshSchedule() {
       let date = new Date();
       this.activeSchedule = this.schedule.filter((x) => date < this.getDateObject(x.end));
+      this.currentEvent = null;
+      this.countdown = null;
+      console.log(1);
     },
     editEvent(index) {
-      let data = this.schedule.splice(index, 1)[0 ];
+      let data = this.schedule.splice(index, 1)[0];
       let start = this.getDateObject(data.start);
       let end = this.getDateObject(data.end);
 
@@ -167,6 +168,11 @@ export default {
 
       this.selectedEnd.hours = end.getHours();
       this.selectedEnd.minutes = end.getMinutes();
+      this.refreshSchedule();
+    },
+    deleteEvent(index) {
+      this.schedule.splice(index, 1);
+      this.refreshSchedule();
     },
     pushNewEvent() {
       this.schedule.push({
@@ -175,6 +181,7 @@ export default {
         start: this.getDateString(this.selectedStart),
         end: this.getDateString(this.selectedEnd)
       });
+      this.refreshSchedule();
     }
   }
 }
@@ -212,6 +219,9 @@ body {
 }
 
 .current-event .event-details {
+  position: absolute;
+  top: 30px;
+  left: 0;
   font-size: 5vw;
 }
 
