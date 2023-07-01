@@ -1,26 +1,263 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div class="menu" v-if="isMenuShown">
+    <div v-for="x in schedule" :key="x.id">
+      <span style="margin-right: 8px;">{{ x.name }}</span>
+      <span>{{ x.start }} ~ {{ x.end }}</span>
+      <button @click="editEvent(schedule.indexOf(x))">編輯</button>
+      <button @click="schedule.splice(schedule.indexOf(x), 1)">刪除</button>
+    </div>
+
+    <div>
+      <select v-model="selectedSubject">
+        <option v-for="x in subjects" :value="x" :key="x">{{ x }}</option>
+      </select>
+      <VueDatePicker class="time-picker" v-model="selectedStart" time-picker />
+      <VueDatePicker class="time-picker" v-model="selectedEnd" time-picker />
+      <button @click="pushNewEvent">新增</button>
+      <br>
+      應到 {{ totalPersons }} 人
+      <button @click="totalPersons++">+</button>
+      <button @click="totalPersons--">-</button>
+      <br>
+      實到 {{ totalPersons - absentPersons }} 人
+      <button @click="absentPersons--">+</button>
+      <button @click="absentPersons++">-</button>
+    </div>
+
+    <img class="menu-btn" src="./assets/close-icon.svg" @click="isMenuShown = false"/>
+  </div>
+
+  <div class="container" v-else>
+    <div class="center">
+      <span id="clock">{{ time }}</span>
+    </div>
+    
+    <div class="current-event" v-if="currentEvent != null">
+      <div class="countdown">
+        <span v-if="countdown">剩下 {{ countdown }}</span>
+      </div>
+      <div class="event-details">
+        <span style="margin-right: 20px;">{{ currentEvent.name }}</span>
+        <span>{{ currentEvent.start }} ~ {{ currentEvent.end }}</span>
+      </div>
+    </div>
+
+    <div class="schedule center" v-for="x in activeSchedule" :key="x.id" v-else>
+      <span style="margin-right: 20px;">{{ x.name }}</span>
+      <span>{{ x.start }} ~ {{ x.end }}</span>
+    </div>
+
+    <span class="other">
+      應到 {{ totalPersons }} 人
+      <br>
+      實到 {{ totalPersons - absentPersons }} 人
+    </span>
+
+    <img class="menu-btn" src="./assets/menu-icon.svg" @click="isMenuShown = !isMenuShown"/>
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
-
 export default {
   name: 'App',
-  components: {
-    HelloWorld
+  data() {
+    let date = new Date();
+
+    return {
+      time: "00:00:00",
+      countdown: null,
+      scheduleId: 10,
+      schedule: [
+        {id: 1, name: "英文", start: "14:50", end: "15:00"},
+        {id: 2, name: "數學", start: "16:50", end: "17:40"},
+        {id: 3, name: "國文", start: "17:50", end: "18:50"}
+      ],
+      activeSchedule: [],
+      currentEvent: null,
+      isMenuShown: false,
+
+      selectedSubject: "國文",
+      selectedStart: {
+        hours: date.getHours(),
+        minutes: date.getMinutes()
+      },
+      selectedEnd: {
+        hours: date.getHours(),
+        minutes: date.getMinutes()
+      },
+
+      subjects: ["國文", "英文", "數學", "電學", "作文"],
+
+      totalPersons: 36,
+      absentPersons: 0
+    };
+  },
+  mounted() {
+    setInterval(() => {
+      let date = new Date();
+      let h = date.getHours();
+      let m = date.getMinutes();
+      let s = date.getSeconds();
+      
+      let hx = (h < 10) ? "0" + h : h;
+      let mx = (m < 10) ? "0" + m : m;
+      let sx = (s < 10) ? "0" + s : s;
+      
+      this.time = hx + ":" + mx + ":" + sx;
+
+      if (this.currentEvent) {
+        let start = this.getDateObject(this.currentEvent.start);
+        let end = this.getDateObject(this.currentEvent.end);
+        if (date > start && date < end) {
+          let h2 = end.getHours() - h;
+          let m2 = end.getMinutes() - m;
+          this.countdown = ((h2 < 10) ? "0" + h2 : h2) + ":" + ((m2 < 10) ? "0" + m2 : m2);
+        }
+        else {
+          this.refreshSchedule();
+          this.currentEvent = null;
+          this.countdown = null;
+        }
+      }
+      else {
+        for (let x of this.schedule) {
+          let start = this.getDateObject(x.start);
+          let end = this.getDateObject(x.end);
+          if (date > start && date < end) {
+            this.currentEvent = x;
+          }
+        }
+      }
+    }, 1000);
+
+    this.refreshSchedule();
+  },
+  watch: {
+    schedule() {
+      this.refreshSchedule();
+    }
+  },
+  methods: {
+    getDateObject(timeString) {
+      let date2 = new Date();
+      let data = timeString.split(":");
+      date2.setHours(parseInt(data[0]), parseInt(data[1]), 0);
+      return date2;
+    },
+    getDateString(dateObject) {
+      let h = dateObject.hours;
+      let m = dateObject.minutes;
+      
+      let hx = (h < 10) ? "0" + h : h;
+      let mx = (m < 10) ? "0" + m : m;
+      
+      return hx + ":" + mx;
+    },
+    refreshSchedule() {
+      let date = new Date();
+      this.activeSchedule = this.schedule.filter((x) => date < this.getDateObject(x.end));
+    },
+    editEvent(index) {
+      let data = this.schedule.splice(index, 1)[0 ];
+      let start = this.getDateObject(data.start);
+      let end = this.getDateObject(data.end);
+
+      this.selectedStart.hours = start.getHours();
+      this.selectedStart.minutes = start.getMinutes();
+
+      this.selectedEnd.hours = end.getHours();
+      this.selectedEnd.minutes = end.getMinutes();
+    },
+    pushNewEvent() {
+      this.schedule.push({
+        id: ++this.scheduleId,
+        name: this.selectedSubject,
+        start: this.getDateString(this.selectedStart),
+        end: this.getDateString(this.selectedEnd)
+      });
+    }
   }
 }
 </script>
 
 <style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+body {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  margin: 0;
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#clock {
+  font-size: 16vw;
+  font-family: monospace;
+  font-weight: bolder;
+}
+
+.current-event {
+  font-weight: bolder;
+}
+
+.current-event div {
+  width: 100%;
   text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
+}
+
+.current-event .event-details {
+  font-size: 5vw;
+}
+
+.current-event .countdown {
+  font-size: 10vw;
+}
+
+.schedule {
+  font-size: 5vw;
+  font-weight: bolder;
+}
+
+.other {
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-size: 3vw;
+  font-weight: bolder;
+}
+
+.menu-btn {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  width: 40px;
+  height: 40px;
+}
+
+.menu .menu-btn {
+  left: 0;
+  bottom: 0;
+}
+
+div.menu {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  width: 30%;
+  height: 30%;
+}
+
+.time-picker {
+  width: 150px !important;
+}
+
+.menu button {
+  margin-left: 8px;
 }
 </style>
